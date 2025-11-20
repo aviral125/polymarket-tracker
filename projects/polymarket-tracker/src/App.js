@@ -304,6 +304,7 @@ function App() {
         <div className="bg-blur-layer">
           <div className="bg-blur-image" />
         </div>
+        <div className="bg-black-overlay" />
         {/* <div className="bg-gradient-overlay" /> */}
         
         <div className="content-wrapper">
@@ -360,6 +361,7 @@ function App() {
         <div className="bg-blur-layer">
           <div className="bg-blur-image" />
         </div>
+        <div className="bg-black-overlay" />
         {/* <div className="bg-gradient-overlay" /> */}
         
         <div className="content-wrapper">
@@ -426,6 +428,7 @@ function App() {
           />
         )}
       </div>
+      <div className="bg-black-overlay" />
       {/* <div className="bg-gradient-overlay" /> */}
       
       {/* Main Content */}
