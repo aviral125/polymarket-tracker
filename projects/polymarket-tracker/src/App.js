@@ -45,13 +45,13 @@ function App() {
 
       // Fetch real profile data
       try {
-        const profileRes = await fetch(`http://localhost:3001/api/profile?address=${wallet}`);
+        const profileRes = await fetch(`/api/profile?address=${wallet}`);
         if (profileRes.ok) {
           const profileData = await profileRes.json();
           if (profileData.profileImage) {
             // Extract color and create blurred gradient from profile image
             // Use proxied image URL to avoid CORS issues
-            const proxiedImageUrl = `http://localhost:3001/api/image?url=${encodeURIComponent(profileData.profileImage)}`;
+            const proxiedImageUrl = `/api/image?url=${encodeURIComponent(profileData.profileImage)}`;
             
             setUserProfile(prev => ({
               ...prev,
@@ -106,7 +106,7 @@ function App() {
 
         try {
           const response = await fetch(
-            `http://localhost:3001/api/activity?user=${wallet.toLowerCase()}&limit=${limit}&offset=${offset}`, 
+            `/api/activity?user=${wallet.toLowerCase()}&limit=${limit}&offset=${offset}`, 
             {
               method: 'GET',
               headers: { 'Content-Type': 'application/json' },
