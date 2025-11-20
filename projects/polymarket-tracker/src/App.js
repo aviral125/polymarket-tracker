@@ -2,9 +2,6 @@ import React, { useState } from 'react';
 import './App.css';
 import ContributionChart from './ContributionChart';
 
-// Polymarket Data API endpoint - using React dev server proxy
-const POLYMARKET_API_URL = '';
-
 function App() {
   const [walletAddress, setWalletAddress] = useState('');
   const [loading, setLoading] = useState(false);
@@ -12,9 +9,7 @@ function App() {
   const [error, setError] = useState(null);
   const [activityData, setActivityData] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
-  const [timeRange, setTimeRange] = useState('365'); // '365', '90', '30'
-  const [searchResults, setSearchResults] = useState([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [timeRange, setTimeRange] = useState('365'); // '30', '90', '365'
 
   // Helper to generate a deterministic gradient based on wallet address
   const getPolymarketGradient = (address) => {
@@ -255,193 +250,208 @@ function App() {
     }
   };
 
-  const handleSearch = async (query) => {
-    setWalletAddress(query);
-    if (query.length < 3) {
-      setSearchResults([]);
-      setShowSuggestions(false);
-      return;
-    }
-
-    // Only search if it looks like a name (not an address)
-    if (!query.startsWith('0x')) {
-        // Since there is no public search API, we will mock this for now
-        // or we could implement a "recent searches" or "popular users" list here
-        // For now, we'll just hide suggestions to avoid confusion as real search is private
-        setShowSuggestions(false);
-    } else {
-        setShowSuggestions(false);
-    }
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
-    setShowSuggestions(false);
     if (walletAddress.trim()) {
       fetchUserActivity(walletAddress.trim());
     }
   };
 
-  const selectUser = (address) => {
-    setWalletAddress(address);
-    setShowSuggestions(false);
-    fetchUserActivity(address);
+  const formatDateJoined = (date) => {
+    if (!date) return 'N/A';
+    return new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(date);
   };
 
-  return (
-    <div className="App">
-      <div className="container">
-        <h1>Polymarket Activity Tracker</h1>
-        <p className="subtitle">View your Polymarket activity in a GitHub-like contribution chart</p>
+  // Render search UI when no data loaded
+  if (!activityData && !loading) {
+    return (
+      <div className="App">
+        <div className="bg-blur-layer">
+          <div className="bg-blur-image" />
+        </div>
+        <div className="bg-gradient-overlay" />
+        
+        <div className="content-wrapper">
+          <div className="branding-section">
+            <h1 className="branding-title">polygit</h1>
+            <p className="branding-subtitle">
+              an ongoing experiment to visualise polymarket activity
+            </p>
+          </div>
 
-        <div className="search-container">
-          <form onSubmit={handleSubmit} className="wallet-form">
-            <input
-              type="text"
-              value={walletAddress}
-              onChange={(e) => handleSearch(e.target.value)}
-              placeholder="Enter Polymarket wallet address (0x...)"
-              className="wallet-input"
-              disabled={loading}
-              onFocus={() => walletAddress.length >= 3 && !walletAddress.startsWith('0x') && setShowSuggestions(true)}
-            />
-            <button type="submit" className="submit-button" disabled={loading || !walletAddress.trim()}>
-              {loading ? 'Loading...' : 'Fetch Activity'}
-            </button>
-          </form>
-          
-          {showSuggestions && searchResults.length > 0 && (
-            <div className="search-suggestions">
-              {searchResults.map((result, index) => (
-                <div key={index} className="suggestion-item" onClick={() => selectUser(result.address)}>
-                  <div className="suggestion-avatar">
-                    {result.profileImage ? (
-                      <img src={result.profileImage} alt="profile" />
-                    ) : (
-                      <div className="suggestion-gradient" style={{ background: getPolymarketGradient(result.address) }} />
-                    )}
-                  </div>
-                  <div className="suggestion-info">
-                    <div className="suggestion-name">{result.name || result.pseudonym}</div>
-                    <div className="suggestion-address">{result.address.slice(0, 6)}...{result.address.slice(-4)}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <div className="search-section">
+            <h2 className="search-title">Track Your Activity</h2>
+            <p className="search-description">
+              Enter a Polymarket wallet address to visualize trading activity
+            </p>
+            
+            <form onSubmit={handleSubmit} className="search-form">
+              <input
+                type="text"
+                value={walletAddress}
+                onChange={(e) => setWalletAddress(e.target.value)}
+                placeholder="Enter wallet address (0x...)"
+                className="search-input"
+                disabled={loading}
+              />
+              <button 
+                type="submit" 
+                className="search-button"
+                disabled={loading || !walletAddress.trim()}
+              >
+                {loading ? 'Loading...' : 'Fetch Activity'}
+              </button>
+            </form>
+
+            {error && (
+              <div className="error-message">
+                {error}
+              </div>
+            )}
+          </div>
         </div>
 
-        {loading && fetchProgress && (
-          <div className="loading-progress">
-            {fetchProgress}
-          </div>
-        )}
+        <div className="bottom-logo">
+          <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>Powered by Polymarket</span>
+        </div>
+      </div>
+    );
+  }
 
-        {error && (
-          <div className="error-message">
-            {error}
+  // Render loading state
+  if (loading) {
+    return (
+      <div className="App">
+        <div className="bg-blur-layer">
+          <div className="bg-blur-image" />
+        </div>
+        <div className="bg-gradient-overlay" />
+        
+        <div className="content-wrapper">
+          <div className="search-section">
+            <h2 className="search-title">Loading...</h2>
+            {fetchProgress && (
+              <p className="loading-message">{fetchProgress}</p>
+            )}
           </div>
-        )}
+        </div>
+      </div>
+    );
+  }
 
-        {activityData && !loading && (
-          <div className="activity-results">
+  // Render activity card
+  return (
+    <div className="App">
+      {/* Background Blur Layer */}
+      <div className="bg-blur-layer">
+        {userProfile?.photoUrl ? (
+          <img 
+            src={userProfile.photoUrl} 
+            className="bg-blur-image"
+            alt="Background Blur" 
+          />
+        ) : (
+          <div 
+            className="bg-blur-image"
+            style={{ background: userProfile?.gradient }}
+          />
+        )}
+      </div>
+      <div className="bg-gradient-overlay" />
+      
+      {/* Main Content */}
+      <div className="content-wrapper">
+        
+        {/* Left Side Branding */}
+        <div className="branding-section">
+          <h1 className="branding-title">polygit</h1>
+          <p className="branding-subtitle">
+            an ongoing experiment to visualise polymarket activity
+          </p>
+        </div>
+
+        {/* Center: The Card */}
+        <div className="activity-card">
+          
+          {/* Top Section: Profile */}
+          <div className="profile-section">
+            <div 
+              className="profile-image-box"
+              style={{ background: userProfile?.photoUrl ? 'transparent' : userProfile?.gradient }}
+            >
+              {userProfile?.photoUrl && (
+                <img 
+                  src={userProfile.photoUrl} 
+                  alt="Profile" 
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+              )}
+            </div>
+            <h2 className="profile-name">
+              {userProfile?.name || `${userProfile?.address.slice(0, 6)}...${userProfile?.address.slice(-4)}`}
+            </h2>
             
-            <div className="profile-header">
-              <div 
-                className="profile-image-container"
-                style={{ background: userProfile?.photoUrl ? 'transparent' : userProfile?.gradient }}
-              >
-                {userProfile?.photoUrl && (
-                  <img 
-                    src={userProfile.photoUrl} 
-                    alt="Profile" 
-                    className="profile-image"
-                    onError={(e) => { e.target.style.display = 'none'; }}
-                  />
-                )}
+            <div className="stats-row">
+              <div className="stat-item">
+                <div className="stat-value">{activityData.totalPredictions.toLocaleString()}</div>
+                <div className="stat-label">Predictions</div>
               </div>
-              <div className="profile-info">
-                <h2 className="profile-address">
-                  {userProfile?.address.slice(0, 6)}...{userProfile?.address.slice(-4)}
-                </h2>
-                <span className="profile-type">Polymarket User</span>
-              </div>
-            </div>
-
-            <div className="stats-grid">
-              <div className="stat-card">
-                <div className="stat-value">{activityData.totalPredictions}</div>
-                <div className="stat-label">Total Predictions</div>
-              </div>
-              <div className="stat-card">
+              <div className="stat-divider" />
+              <div className="stat-item">
                 <div className="stat-value">{activityData.totalMarkets}</div>
-                <div className="stat-label">Markets Interacted</div>
+                <div className="stat-label">Markets traded</div>
               </div>
-              <div className="stat-card">
-                <div className="stat-value">{activityData.longestStreak} days</div>
-                <div className="stat-label">Longest Streak</div>
+              <div className="stat-divider" />
+              <div className="stat-item">
+                <div className="stat-value">{formatDateJoined(activityData.dateJoined)}</div>
+                <div className="stat-label">Date joined</div>
               </div>
-              <div className="stat-card">
-                <div className="stat-value">
-                  {activityData.dateJoined ? activityData.dateJoined.toLocaleDateString() : 'N/A'}
-                </div>
-                <div className="stat-label">Date Joined</div>
+            </div>
+          </div>
+
+          {/* Divider with Notches */}
+          <div className="card-divider" />
+
+          {/* Bottom Section: Grid + Selector */}
+          <div className="chart-section">
+            {/* Streak + Time Range Row */}
+            <div className="streak-display">
+              <div className="streak-info">
+                <div className="streak-value">{activityData.longestStreak} days</div>
+                <div className="streak-label">Longest streak</div>
+              </div>
+              
+              <div className="selector-wrapper">
+                {['30', '90', '365'].map((range) => (
+                  <button
+                    key={range}
+                    onClick={() => setTimeRange(range)}
+                    className={`selector-button ${timeRange === range ? 'active' : ''}`}
+                  >
+                    {range === '30' ? '1M' : range === '90' ? '3M' : '1Y'}
+                  </button>
+                ))}
               </div>
             </div>
 
-            <div className="chart-section">
-              <div className="chart-header">
-                <h2>Activity Heatmap</h2>
-                <div className="time-range-controls">
-                    <button 
-                        className={`range-btn ${timeRange === '30' ? 'active' : ''}`}
-                        onClick={() => setTimeRange('30')}
-                    >
-                        Month
-                    </button>
-                    <button 
-                        className={`range-btn ${timeRange === '90' ? 'active' : ''}`}
-                        onClick={() => setTimeRange('90')}
-                    >
-                        3 Months
-                    </button>
-                    <button 
-                        className={`range-btn ${timeRange === '365' ? 'active' : ''}`}
-                        onClick={() => setTimeRange('365')}
-                    >
-                        Year
-                    </button>
-                </div>
-              </div>
+            <div className="chart-container">
               <ContributionChart 
                 activityByDate={activityData.activityByDate} 
                 daysToShow={parseInt(timeRange)} 
               />
             </div>
-
-            <div className="activity-history">
-              <h2>Activity History</h2>
-              <div className="history-list">
-                {activityData.activities.slice(0, 50).map((activity, index) => (
-                  <div key={index} className="history-item">
-                    <div className="history-date">{activity.date.toLocaleDateString()}</div>
-                    <div className="history-type">{activity.type}</div>
-                    <div className="history-market">{activity.market.question || activity.market.id}</div>
-                  </div>
-                ))}
-                {activityData.activities.length > 50 && (
-                  <div className="history-more">
-                    ... and {activityData.activities.length - 50} more activities
-                  </div>
-                )}
-              </div>
-            </div>
           </div>
-        )}
+        </div>
+
       </div>
+
+      {/* Bottom Logo */}
+      <div className="bottom-logo">
+        <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>Powered by Polymarket</span>
+      </div>
+
     </div>
   );
 }
 
 export default App;
-

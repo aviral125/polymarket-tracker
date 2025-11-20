@@ -1,7 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useEffect, useState } from 'react';
 import './ContributionChart.css';
 
 const ContributionChart = ({ activityByDate = {}, daysToShow = 365 }) => {
+  const containerRef = useRef(null);
+  const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+
   // Helper function to get local date string (YYYY-MM-DD) to match App.js
   const getLocalDateKey = (date) => {
     const year = date.getFullYear();
@@ -10,172 +13,175 @@ const ContributionChart = ({ activityByDate = {}, daysToShow = 365 }) => {
     return `${year}-${month}-${day}`;
   };
 
-  // Generate days based on daysToShow, aligned to weeks starting on Sunday
+  // Measure container size for responsive grid
+  useEffect(() => {
+    if (!containerRef.current) return;
+    
+    const observer = new ResizeObserver((entries) => {
+      for (let entry of entries) {
+        setDimensions({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height
+        });
+      }
+    });
+
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, []);
+
+  // Generate days based on daysToShow
   const days = useMemo(() => {
     const result = [];
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // Find the most recent Saturday (end of the current week for the chart)
-    // Actually standard GitHub chart ends on "today" or nearest "Saturday"?
-    // Let's stick to the previous logic: align to weeks.
-    // If we want the chart to END today, we should make sure the last column includes today.
-    
-    // Let's assume standard GitHub style: columns are weeks.
-    // We need enough columns to cover 'daysToShow'.
-    
     // Calculate start date
     const startDate = new Date(today);
     startDate.setDate(today.getDate() - daysToShow);
+    startDate.setHours(0, 0, 0, 0);
     
-    // Adjust start date to the previous Sunday
-    const startDayOfWeek = startDate.getDay(); // 0 is Sunday
-    startDate.setDate(startDate.getDate() - startDayOfWeek);
-    
-    // Calculate end date (next Saturday from today to complete the week)
-    const endDayOfWeek = today.getDay();
-    const daysUntilSaturday = 6 - endDayOfWeek;
-    const endDate = new Date(today);
-    endDate.setDate(today.getDate() + daysUntilSaturday);
-    
-    // Generate all days from startDate to endDate
+    // Generate all days from startDate to today
     const currentDate = new Date(startDate);
-    while (currentDate <= endDate) {
-        const dateKey = getLocalDateKey(currentDate);
-        result.push({
-            date: new Date(currentDate),
-            dateKey,
-            count: activityByDate[dateKey] || 0
-        });
-        currentDate.setDate(currentDate.getDate() + 1);
+    while (currentDate <= today) {
+      const dateKey = getLocalDateKey(currentDate);
+      result.push({
+        id: currentDate.toISOString(),
+        date: new Date(currentDate),
+        dateKey,
+        count: activityByDate[dateKey] || 0,
+        label: new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(currentDate)
+      });
+      currentDate.setDate(currentDate.getDate() + 1);
     }
     
     return result;
   }, [activityByDate, daysToShow]);
 
-  // Calculate max activity for color intensity
-  const maxActivity = useMemo(() => {
-    const values = Object.values(activityByDate || {});
-    return values.length > 0 ? Math.max(...values, 1) : 1;
-  }, [activityByDate]);
+  // Determine Gap and Radius based on density (Figma logic)
+  const { targetGap, radius } = useMemo(() => {
+    const count = days.length;
+    if (count < 70) {
+      // 1 Month
+      return { targetGap: 4, radius: 6 }; 
+    } else if (count < 200) {
+      // 3 Months
+      return { targetGap: 4, radius: 4 };
+    } else {
+      // 1 Year
+      return { targetGap: 2.5, radius: 2 };
+    }
+  }, [days.length]);
 
-  const getColorIntensity = (count) => {
-    if (count === 0) return 0;
-    const intensity = Math.min(count / maxActivity, 1);
-    if (intensity < 0.25) return 1;
-    if (intensity < 0.5) return 2;
-    if (intensity < 0.75) return 3;
-    return 4;
-  };
+  // Calculate Grid Layout (Figma algorithm)
+  const { cols, tileSize, gap } = useMemo(() => {
+    if (dimensions.width === 0 || days.length === 0) {
+      return { cols: 1, tileSize: 10, gap: 2 };
+    }
 
-  const getColorClass = (intensity) => {
-    return `activity-level-${intensity}`;
-  };
-
-  // Group days by weeks (each week starts on Sunday)
-  const weeks = useMemo(() => {
-    const result = [];
+    const count = days.length;
+    const W = dimensions.width;
+    const H = dimensions.height;
     
-    for (let i = 0; i < days.length; i += 7) {
-      const week = days.slice(i, i + 7);
-      // Ensure each week has exactly 7 days (pad with nulls if needed)
-      while (week.length < 7) {
-        week.push(null);
+    let bestS = 0;
+    
+    // Find best tile size
+    for (let s = Math.floor(H); s > 2; s--) {
+      const c = Math.floor(W / (s + targetGap));
+      const r = Math.floor(H / (s + targetGap));
+      if (c * r >= count) {
+        bestS = s;
+        break;
       }
-      result.push(week);
     }
     
-    return result;
-  }, [days]);
+    if (bestS === 0) {
+      bestS = Math.sqrt((W * H) / count) - targetGap;
+    }
 
-  // Get month labels
-  const monthLabels = useMemo(() => {
-    const labels = [];
-    let lastMonth = -1;
+    const computedCols = Math.floor(W / (bestS + targetGap));
     
-    weeks.forEach((week, weekIndex) => {
-      // Find first non-null day in the week
-      const firstDay = week.find(day => day !== null);
-      if (firstDay && firstDay.date) {
-        const month = firstDay.date.getMonth();
-        
-        if (month !== lastMonth && weekIndex % 4 === 0) {
-          labels.push({
-            weekIndex,
-            label: firstDay.date.toLocaleDateString('en-US', { month: 'short' }),
+    return {
+      cols: computedCols,
+      tileSize: bestS,
+      gap: targetGap
+    };
+  }, [dimensions, days.length, targetGap]);
+
+  // Green Theme Colors based on Figma Design
+  const getColor = (count) => {
+    if (count === 0) return 'rgba(0, 0, 0, 0.06)'; // Light gray for empty
+    if (count >= 1 && count < 5) return 'rgba(48, 187, 49, 0.4)';
+    if (count >= 5 && count < 10) return 'rgba(48, 187, 49, 0.7)';
+    return '#30bb31'; // Full green for high activity
+  };
+
+  // Generate month labels
+  const labels = useMemo(() => {
+    const labelsList = [];
+    let lastMonth = -1;
+
+    days.forEach((day, index) => {
+      const month = day.date.getMonth();
+      if (month !== lastMonth) {
+        // Only add label if it fits (heuristic based on index distance)
+        if (index === 0 || index - (labelsList[labelsList.length - 1]?.index || 0) > (days.length / 4)) {
+          labelsList.push({ 
+            text: new Intl.DateTimeFormat('en-US', { month: 'short' }).format(day.date), 
+            index 
           });
           lastMonth = month;
         }
       }
     });
-    
-    return labels;
-  }, [weeks]);
+    return labelsList;
+  }, [days]);
 
   return (
-    <div className="contribution-chart">
-      <div className="chart-container">
-        <div className="month-labels">
-          {monthLabels.map((label, index) => (
-            <div
-              key={index}
-              className="month-label"
-              style={{ left: `${(label.weekIndex / weeks.length) * 100}%` }}
-            >
-              {label.label}
-            </div>
-          ))}
-        </div>
-        
-        <div className="chart-grid">
-          <div className="day-labels">
-            <div>Sun</div>
-            <div>Mon</div>
-            <div>Tue</div>
-            <div>Wed</div>
-            <div>Thu</div>
-            <div>Fri</div>
-            <div>Sat</div>
-          </div>
-          
-          <div className="weeks-container">
-            {weeks.map((week, weekIndex) => (
-              <div key={weekIndex} className="week">
-                {week.map((day, dayIndex) => {
-                  if (!day) {
-                    return <div key={`empty-${dayIndex}`} className="day-cell empty" />;
-                  }
-                  const intensity = getColorIntensity(day.count);
-                  const colorClass = getColorClass(intensity);
-                  
-                  return (
-                    <div
-                      key={day.dateKey}
-                      className={`day-cell ${colorClass}`}
-                      title={`${day.date.toLocaleDateString()}: ${day.count} ${day.count === 1 ? 'activity' : 'activities'}`}
-                    />
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        </div>
+    <div className="contribution-chart-wrapper">
+      {/* Grid Container */}
+      <div 
+        ref={containerRef}
+        className="contribution-grid"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: `repeat(${cols}, ${tileSize}px)`,
+          gridAutoRows: `${tileSize}px`,
+          gap: `${gap}px`,
+          alignContent: 'start',
+          justifyContent: 'start',
+        }}
+      >
+        {days.map((item) => (
+          <div 
+            key={item.id} 
+            className="grid-cell"
+            style={{
+              backgroundColor: getColor(item.count),
+              borderRadius: `${radius}px`
+            }}
+            title={`${item.label}: ${item.count} ${item.count === 1 ? 'activity' : 'activities'}`}
+          />
+        ))}
       </div>
-      
-      <div className="chart-legend">
-        <span className="legend-label">Less</span>
-        <div className="legend-cells">
-          <div className="day-cell activity-level-0" />
-          <div className="day-cell activity-level-1" />
-          <div className="day-cell activity-level-2" />
-          <div className="day-cell activity-level-3" />
-          <div className="day-cell activity-level-4" />
-        </div>
-        <span className="legend-label">More</span>
+
+      {/* Labels Row */}
+      <div className="chart-labels">
+        {labels.map((label, i) => {
+          const pct = (label.index / days.length) * 100;
+          return (
+            <div 
+              key={`${label.text}-${i}`}
+              className="chart-label"
+              style={{ left: `${pct}%` }}
+            >
+              {label.text}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 };
 
 export default ContributionChart;
-
