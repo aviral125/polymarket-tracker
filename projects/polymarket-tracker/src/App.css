@@ -43,11 +43,11 @@ body {
   transform: scale(1.2);
 }
 
-/* Black Overlay - 30% opacity over blur layer */
+/* Black Overlay - 15% opacity over blur layer */
 .bg-black-overlay {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.15);
   pointer-events: none;
   z-index: 1;
 }
