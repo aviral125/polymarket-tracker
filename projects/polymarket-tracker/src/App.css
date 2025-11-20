@@ -43,12 +43,12 @@ body {
   transform: scale(1.5);
 }
 
-/* Gradient Overlay */
+/* Gradient Overlay - Doubled opacity for darker effect */
 .bg-gradient-overlay {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 50% 100%, rgba(19, 82, 239, 0.4) 0%, rgba(19, 82, 239, 0) 50%), 
-              radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0) 100%);
+  background: radial-gradient(circle at 50% 100%, rgba(19, 82, 239, 0.8) 0%, rgba(19, 82, 239, 0) 50%), 
+              radial-gradient(circle at 50% 0%, rgba(255, 255, 255, 1) 0%, rgba(255, 255, 255, 0) 100%);
 }
 
 /* Main Content Container */
@@ -376,6 +376,53 @@ body {
 
 .grid-cell:hover {
   transform: scale(1.1);
+}
+
+/* Fixed Search Box at Top */
+.fixed-search-box {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 100;
+  display: flex;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 0.5rem;
+  border-radius: 0.75rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.fixed-search-input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  width: 200px;
+  transition: all 0.15s;
+}
+
+.fixed-search-input:focus {
+  outline: none;
+  border-color: rgba(19, 82, 239, 0.5);
+  box-shadow: 0 0 0 3px rgba(19, 82, 239, 0.1);
+  width: 250px;
+}
+
+.fixed-search-button {
+  padding: 0.5rem 0.75rem;
+  background: black;
+  color: white;
+  border: none;
+  border-radius: 0.5rem;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.fixed-search-button:hover {
+  background: rgba(0, 0, 0, 0.85);
+  transform: scale(1.05);
 }
 
 /* Logo at bottom */

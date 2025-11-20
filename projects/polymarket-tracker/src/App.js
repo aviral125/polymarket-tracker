@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import './App.css';
 import ContributionChart from './ContributionChart';
+import { extractColor, createBlurredImage, extractColorFromGradient } from './utils/colorExtractor';
 
 function App() {
   const [walletAddress, setWalletAddress] = useState('');
@@ -10,6 +11,8 @@ function App() {
   const [activityData, setActivityData] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [timeRange, setTimeRange] = useState('365'); // '30', '90', '365'
+  const [dominantColor, setDominantColor] = useState('#30bb31'); // Default green
+  const [blurredGradientUrl, setBlurredGradientUrl] = useState(null);
 
   // Helper to generate a deterministic gradient based on wallet address
   const getPolymarketGradient = (address) => {
@@ -51,10 +54,39 @@ function App() {
               photoUrl: profileData.profileImage,
               name: profileData.name || profileData.pseudonym
             }));
+
+            // Extract color and create blurred gradient from profile image
+            try {
+              const colorResult = await extractColor(profileData.profileImage);
+              if (colorResult && colorResult.hex) {
+                setDominantColor(colorResult.hex);
+                console.log('Extracted dominant color:', colorResult.hex);
+              }
+
+              const blurredUrl = await createBlurredImage(profileData.profileImage);
+              if (blurredUrl) {
+                setBlurredGradientUrl(blurredUrl);
+                console.log('Created blurred gradient');
+              }
+            } catch (colorErr) {
+              console.warn('Failed to extract color or create blur:', colorErr);
+            }
+          } else {
+            // No profile photo - extract color from gradient
+            const gradientColor = extractColorFromGradient(getPolymarketGradient(wallet));
+            if (gradientColor && gradientColor.hex) {
+              setDominantColor(gradientColor.hex);
+              console.log('Extracted color from gradient:', gradientColor.hex);
+            }
           }
         }
       } catch (err) {
         console.warn('Failed to fetch profile image:', err);
+        // Extract color from gradient as fallback
+        const gradientColor = extractColorFromGradient(getPolymarketGradient(wallet));
+        if (gradientColor && gradientColor.hex) {
+          setDominantColor(gradientColor.hex);
+        }
       }
 
       let allFetchedActivities = [];
@@ -339,12 +371,46 @@ function App() {
     );
   }
 
+  const handleNewSearch = (e) => {
+    e.preventDefault();
+    if (walletAddress.trim()) {
+      // Reset states and fetch new wallet
+      setActivityData(null);
+      setUserProfile(null);
+      setDominantColor('#30bb31');
+      setBlurredGradientUrl(null);
+      fetchUserActivity(walletAddress.trim());
+    }
+  };
+
   // Render activity card
   return (
     <div className="App">
+      {/* Fixed Search Box (shown when data is loaded) */}
+      {activityData && !loading && (
+        <form onSubmit={handleNewSearch} className="fixed-search-box">
+          <input
+            type="text"
+            value={walletAddress}
+            onChange={(e) => setWalletAddress(e.target.value)}
+            placeholder="Search another wallet..."
+            className="fixed-search-input"
+          />
+          <button type="submit" className="fixed-search-button">
+            🔍
+          </button>
+        </form>
+      )}
+
       {/* Background Blur Layer */}
       <div className="bg-blur-layer">
-        {userProfile?.photoUrl ? (
+        {blurredGradientUrl ? (
+          <img 
+            src={blurredGradientUrl} 
+            className="bg-blur-image"
+            alt="Background Blur" 
+          />
+        ) : userProfile?.photoUrl ? (
           <img 
             src={userProfile.photoUrl} 
             className="bg-blur-image"
@@ -437,7 +503,8 @@ function App() {
             <div className="chart-container">
               <ContributionChart 
                 activityByDate={activityData.activityByDate} 
-                daysToShow={parseInt(timeRange)} 
+                daysToShow={parseInt(timeRange)}
+                dominantColor={dominantColor}
               />
             </div>
           </div>

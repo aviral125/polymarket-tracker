@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useEffect, useState } from 'react';
 import './ContributionChart.css';
 
-const ContributionChart = ({ activityByDate = {}, daysToShow = 365 }) => {
+const ContributionChart = ({ activityByDate = {}, daysToShow = 365, dominantColor = '#30bb31' }) => {
   const containerRef = useRef(null);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
@@ -108,12 +108,20 @@ const ContributionChart = ({ activityByDate = {}, daysToShow = 365 }) => {
     };
   }, [dimensions, days.length, targetGap]);
 
-  // Green Theme Colors based on Figma Design
+  // Dynamic Theme Colors based on extracted dominant color
   const getColor = (count) => {
     if (count === 0) return 'rgba(0, 0, 0, 0.06)'; // Light gray for empty
-    if (count >= 1 && count < 5) return 'rgba(48, 187, 49, 0.4)';
-    if (count >= 5 && count < 10) return 'rgba(48, 187, 49, 0.7)';
-    return '#30bb31'; // Full green for high activity
+    
+    // Parse hex color to RGB
+    const hex = dominantColor.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    // 4 shades based on activity count
+    if (count >= 1 && count < 5) return `rgba(${r}, ${g}, ${b}, 0.4)`;
+    if (count >= 5 && count < 10) return `rgba(${r}, ${g}, ${b}, 0.7)`;
+    return `rgb(${r}, ${g}, ${b})`; // Full color for high activity
   };
 
   // Generate month labels
