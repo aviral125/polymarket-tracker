@@ -49,15 +49,16 @@ function App() {
         if (profileRes.ok) {
           const profileData = await profileRes.json();
           if (profileData.profileImage) {
-            setUserProfile(prev => ({
-              ...prev,
-              photoUrl: profileData.profileImage,
-              name: profileData.name || profileData.pseudonym
-            }));
-
             // Extract color and create blurred gradient from profile image
             // Use proxied image URL to avoid CORS issues
             const proxiedImageUrl = `http://localhost:3001/api/image?url=${encodeURIComponent(profileData.profileImage)}`;
+            
+            setUserProfile(prev => ({
+              ...prev,
+              photoUrl: proxiedImageUrl, // Use proxied URL to avoid CORS
+              name: profileData.name || profileData.pseudonym
+            }));
+
             try {
               const colorResult = await extractColor(proxiedImageUrl);
               if (colorResult && colorResult.hex) {
