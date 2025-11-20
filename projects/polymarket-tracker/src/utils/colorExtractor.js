@@ -43,8 +43,6 @@ export const extractColor = (imageSource) => {
       url = imageSource;
     }
 
-    // Enable CORS for external URLs
-    img.crossOrigin = 'anonymous';
     
     img.onload = () => {
       try {
@@ -116,8 +114,6 @@ export const createBlurredImage = (imageSource) => {
       url = imageSource;
     }
 
-    // Enable CORS for external URLs
-    img.crossOrigin = 'anonymous';
     
     img.onload = () => {
       try {

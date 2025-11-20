@@ -13,6 +13,35 @@ app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Proxy server is running' });
 });
 
+// Image proxy endpoint to handle CORS-blocked images
+app.get('/api/image', async (req, res) => {
+  const { url } = req.query;
+  
+  if (!url) {
+    return res.status(400).json({ error: 'Missing url parameter' });
+  }
+
+  try {
+    console.log(`[Proxy] Fetching image: ${url}`);
+    const fetch = (await import('node-fetch')).default;
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.statusCode}`);
+    }
+
+    const buffer = await response.buffer();
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    
+    res.set('Content-Type', contentType);
+    res.set('Access-Control-Allow-Origin', '*');
+    res.send(buffer);
+  } catch (error) {
+    console.error(`[Proxy] Image fetch error:`, error.message);
+    res.status(500).json({ error: 'Failed to fetch image', message: error.message });
+  }
+});
+
     // Proxy endpoint
     app.use('/api/profile', createProxyMiddleware({
       target: 'https://polymarket.com',

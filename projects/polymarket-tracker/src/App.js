@@ -56,14 +56,16 @@ function App() {
             }));
 
             // Extract color and create blurred gradient from profile image
+            // Use proxied image URL to avoid CORS issues
+            const proxiedImageUrl = `http://localhost:3001/api/image?url=${encodeURIComponent(profileData.profileImage)}`;
             try {
-              const colorResult = await extractColor(profileData.profileImage);
+              const colorResult = await extractColor(proxiedImageUrl);
               if (colorResult && colorResult.hex) {
                 setDominantColor(colorResult.hex);
                 console.log('Extracted dominant color:', colorResult.hex);
               }
 
-              const blurredUrl = await createBlurredImage(profileData.profileImage);
+              const blurredUrl = await createBlurredImage(proxiedImageUrl);
               if (blurredUrl) {
                 setBlurredGradientUrl(blurredUrl);
                 console.log('Created blurred gradient');
