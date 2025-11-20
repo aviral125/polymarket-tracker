@@ -304,7 +304,7 @@ function App() {
         <div className="bg-blur-layer">
           <div className="bg-blur-image" />
         </div>
-        <div className="bg-gradient-overlay" />
+        {/* <div className="bg-gradient-overlay" /> */}
         
         <div className="content-wrapper">
           <div className="branding-section">
@@ -360,7 +360,7 @@ function App() {
         <div className="bg-blur-layer">
           <div className="bg-blur-image" />
         </div>
-        <div className="bg-gradient-overlay" />
+        {/* <div className="bg-gradient-overlay" /> */}
         
         <div className="content-wrapper">
           <div className="search-section">
@@ -426,7 +426,7 @@ function App() {
           />
         )}
       </div>
-      <div className="bg-gradient-overlay" />
+      {/* <div className="bg-gradient-overlay" /> */}
       
       {/* Main Content */}
       <div className="content-wrapper">
